@@ -472,7 +472,7 @@ footer{color:var(--muted);font-size:.85rem;text-align:center;padding:8px 0}
     <input type="password" id="aiKey" placeholder="sk-ant-..." autocomplete="off">
     <label>Модель</label>
     <div class="r"><select id="aiModel"></select><button class="btn soft small" id="aiLoadModels" type="button">Жүктеу</button></div>
-    <span class="muted" style="font-size:.76rem">Кілт тек осы браузерде сақталады және файлға жазылмайды. Модельдер тізімі кілт арқылы Anthropic-тен жүктеледі.</span>
+    <span class="muted" style="font-size:.76rem">Модельдер тізімі кілт арқылы Anthropic-тен жүктеледі.</span>
   </div>
   <div class="msgs" id="msgs"></div>
   <div class="aichips" id="aiChips"></div>
@@ -489,6 +489,10 @@ footer{color:var(--muted);font-size:.85rem;text-align:center;padding:8px 0}
 <script>
 (function(){
 "use strict";
+/* ==== ИИ БАПТАУЫ: кілтті осы жерге қойыңыз ==== */
+const API_KEY = "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";                 
+const API_MODEL = "";               // бос қалса, қолжетімді Sonnet моделі автоматты таңдалады
+/* ============================================== */
 const C_W = 4200;
 const $ = id => document.getElementById(id);
 const store = {
@@ -1039,8 +1043,10 @@ $('aiSetBtn').onclick=()=>$('aiSet').classList.toggle('on');
 $('aiClear').onclick=()=>{ history=[]; msgs.innerHTML=''; greet(); };
 function toggleAI(o){ if(!msgs.children.length) greet(); if(!getKey()) $('aiSet').classList.add('on'); $('ai').scrollIntoView({behavior:'smooth',block:'start'}); }
 function greet(){ addMsg('a','Сәлем! Мен осы зертханалық жұмыс бойынша көмекшімін. Модельдің қазіргі параметрлерін және кестедегі деректеріңізді көремін. Формуланы түсіндіріп, есепті тексеріп, қорғауға дайындауға көмектесе аламын.'); }
-const getKey=()=>store.get('key','');
-$('aiKey').value=getKey(); $('aiKey').addEventListener('change',e=>{ store.set('key',e.target.value.trim()); });
+const getKey=()=>API_KEY || store.get('key','');
+if(API_KEY){ const k=$('aiKey'); k.previousElementSibling.style.display='none'; k.style.display='none'; $('aiSetBtn').textContent='Баптау'; const intro=document.querySelector('#s12 > p.small'); if(intro) intro.textContent='Көмекші модельдің қазіргі мәндерін және кестедегі деректерді көреді.'; }
+if(API_MODEL){ store.set('model',API_MODEL); }
+$('aiKey').value=API_KEY?'':store.get('key',''); $('aiKey').addEventListener('change',e=>{ store.set('key',e.target.value.trim()); });
 function fillModels(list,sel){ const m=$('aiModel'); m.innerHTML=list.map(x=>`<option value="${x}">${x}</option>`).join(''); if(sel) m.value=sel; }
 fillModels(store.get('models',[]).length?store.get('models',[]):[store.get('model','')||'(кілт енгізіп, «Жүктеу» басыңыз)'], store.get('model',''));
 $('aiModel').onchange=e=>store.set('model',e.target.value);
@@ -1052,7 +1058,7 @@ async function loadModels(){
   const pick=store.get('model','') && ids.includes(store.get('model','')) ? store.get('model','') : (ids.find(x=>/sonnet/.test(x))||ids[0]);
   store.set('models',ids); store.set('model',pick); fillModels(ids,pick); return pick;
 }
-$('aiLoadModels').onclick=async()=>{ store.set('key',$('aiKey').value.trim()); try{ await loadModels(); }catch(e){ addMsg('err',e.message); } };
+$('aiLoadModels').onclick=async()=>{ if(!API_KEY) store.set('key',$('aiKey').value.trim()); try{ await loadModels(); }catch(e){ addMsg('err',e.message); } };
 
 function ctxJSON(){
   const r=calc(S);
@@ -1081,7 +1087,7 @@ $('aiText').addEventListener('input',e=>{ e.target.style.height='auto'; e.target
 
 async function send(text){
   if(busy) return;
-  store.set('key',$('aiKey').value.trim());
+  if(!API_KEY && $('aiKey').value.trim()) store.set('key',$('aiKey').value.trim());
   const key=getKey();
   addMsg('u',text); $('aiText').value=''; $('aiText').style.height='auto';
   if(!key){ addMsg('err','ИИ көмекшіні қосу үшін баптауда Anthropic API кілтін енгізіңіз (console.anthropic.com).'); $('aiSet').classList.add('on'); return; }
